@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 智能体对话窗口</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; background: #f4f7f6; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        #chat-window { width: 100%; max-width: 600px; background: white; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; }
+        .msg { margin-bottom: 15px; padding: 10px; border-radius: 10px; }
+        .user { background: #e1f5fe; align-self: flex-end; text-align: right; }
+        .ai { background: #f5f5f5; border: 1px solid #ddd; }
+        #input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="chat-window">
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="输入问题...">
+        <button onclick="sendMessage()">发送</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const messages = document.getElementById('messages');
+        const question = input.value;
+        if (!question) return;
+
+        // 添加用户气泡
+        messages.innerHTML += `<div class="msg user">${question}</div>`;
+        input.value = '';
+
+        // 请求后端接口
+        const response = await fetch(`http://127.0.0.1:8000/chat?question=${encodeURIComponent(question)}`);
+        
+        // 读取流式响应
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiMsg = document.createElement('div');
+        aiMsg.className = 'msg ai';
+        messages.appendChild(aiMsg);
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            aiMsg.innerText += decoder.decode(value);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+</script>
+
+</body>
+</html>
