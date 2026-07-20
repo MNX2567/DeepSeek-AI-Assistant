@@ -16,10 +16,8 @@ import redis
 
 # 导入 LangChain 智能体组件
 from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-# 如果依然报错，请尝试下面这种拆分导入，这在 0.2.x 版本中最稳妥：
 from langchain.agents import create_tool_calling_agent
-from langchain.agents import AgentExecutor
+from langchain.agents.agent import AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
