@@ -21,7 +21,7 @@ from langchain.agents.agent import AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-
+from langchain.agents.agent import AgentExecutor
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 load_dotenv()
 
