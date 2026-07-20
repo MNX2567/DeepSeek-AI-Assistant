@@ -49,8 +49,46 @@ collection = chroma_client.get_or_create_collection(name="zhexin_kb")
 async def home():
     return """
     <!DOCTYPE html>
-    <html>
-    <body><h1>RAG 服务已启动</h1></body>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title>哲鑫的全栈 RAG 知识库终端</title>
+        <script src="https://cdn.bootcdn.net/ajax/libs/marked/4.2.12/marked.min.js"></script>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f7f7f8; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+            .header { background: white; padding: 15px 20px; border-bottom: 1px solid #e5e7eb; }
+            #chat-container { flex: 1; overflow-y: auto; padding: 20px; }
+            #input-container { background: white; padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
+            input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+            button { padding: 10px 20px; background: #10a37f; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="header"><h3>🤖 RAG 智能知识库</h3></div>
+        <div id="chat-container"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="输入问题...">
+            <button onclick="send()">发送</button>
+        </div>
+        <script>
+            async function send() {
+                const input = document.getElementById('user-input');
+                const text = input.value;
+                document.getElementById('chat-container').innerHTML += `<p><b>你:</b> ${text}</p>`;
+                input.value = '';
+                const response = await fetch(`/ask?question=${encodeURIComponent(text)}&session_id=1`);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let aiDiv = document.createElement('div');
+                document.getElementById('chat-container').appendChild(aiDiv);
+                while(true){
+                    const {done, value} = await reader.read();
+                    if(done) break;
+                    aiDiv.innerHTML += decoder.decode(value);
+                }
+            }
+        </script>
+    </body>
     </html>
     """
 
