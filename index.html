@@ -2,58 +2,116 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI 智能体对话窗口</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic RAG 全栈智能体</title>
+    <!-- 引入 marked.js 渲染 Markdown -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/marked/4.2.12/marked.min.js"></script>
+    
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; background: #f4f7f6; display: flex; justify-content: center; height: 100vh; margin: 0; }
-        #chat-window { width: 100%; max-width: 600px; background: white; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; }
-        .msg { margin-bottom: 15px; padding: 10px; border-radius: 10px; }
-        .user { background: #e1f5fe; align-self: flex-end; text-align: right; }
-        .ai { background: #f5f5f5; border: 1px solid #ddd; }
+        #chat-window { width: 100%; max-width: 800px; background: white; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* 顶部上传工具栏 */
+        .header { background: white; padding: 15px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .header h3 { margin: 0; color: #374151; font-size: 18px; }
+        .btn-upload { background: #10a37f; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;}
+        .btn-upload:hover { background: #0e8c6d; }
+        input[type="file"] { display: none; }
+
+        /* 聊天消息区 */
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg { margin-bottom: 15px; padding: 12px 16px; border-radius: 10px; max-width: 80%; line-height: 1.6; word-break: break-all;}
+        .user { background: #e1f5fe; align-self: flex-end; color: #0056b3; }
+        .ai { background: #f9f9f9; border: 1px solid #e5e5e5; align-self: flex-start; color: #333; }
+        
+        /* 底部输入区 */
         #input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 5px; outline: none; font-size: 15px;}
+        input[type="text"]:focus { border-color: #10a37f; }
+        button.send { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;}
     </style>
 </head>
 <body>
 
 <div id="chat-window">
+    <div class="header">
+        <h3>🤖 Agentic RAG (智能体 + 知识库)</h3>
+        <div>
+            <input type="file" id="file-upload" accept=".txt,.pdf" onchange="uploadFile()">
+            <button class="btn-upload" onclick="document.getElementById('file-upload').click()">+ 上传私有文档</button>
+        </div>
+    </div>
+
     <div id="messages"></div>
+    
     <div id="input-area">
-        <input type="text" id="user-input" placeholder="输入问题...">
-        <button onclick="sendMessage()">发送</button>
+        <input type="text" id="user-input" placeholder="查天气，或询问关于上传文档的问题..." onkeydown="if(event.keyCode==13) sendMessage()">
+        <button class="send" onclick="sendMessage()">发送</button>
     </div>
 </div>
 
 <script>
+    if (!localStorage.getItem('session_id')) {
+        localStorage.setItem('session_id', 'sess_' + Math.random().toString(36).substr(2, 9));
+    }
+    const sessionId = localStorage.getItem('session_id');
+    const messagesDiv = document.getElementById('messages');
+
+    function appendMessage(content, type) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${type}`;
+        msgDiv.innerHTML = type === 'ai' ? marked.parse(content) : content;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return msgDiv; 
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('file-upload');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        appendMessage(`正在把《${file.name}》喂给智能体...`, 'ai');
+        
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: formData });
+            const result = await response.json();
+            appendMessage(`✅ ${result.message}`, 'ai');
+        } catch (e) {
+            appendMessage(`❌ 上传失败，无法连接到后端: ${e.message}`, 'ai');
+        }
+        fileInput.value = ''; 
+    }
+
     async function sendMessage() {
         const input = document.getElementById('user-input');
-        const messages = document.getElementById('messages');
-        const question = input.value;
+        const question = input.value.trim();
         if (!question) return;
 
-        // 添加用户气泡
-        messages.innerHTML += `<div class="msg user">${question}</div>`;
+        appendMessage(question, 'user');
         input.value = '';
 
-        // 请求后端接口
-        const response = await fetch(`http://127.0.0.1:8000/chat?question=${encodeURIComponent(question)}`);
-        
-        // 读取流式响应
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let aiMsg = document.createElement('div');
-        aiMsg.className = 'msg ai';
-        messages.appendChild(aiMsg);
+        const aiMsgDiv = appendMessage('🧠 智能体思考/调用工具中...', 'ai');
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            aiMsg.innerText += decoder.decode(value);
-            messages.scrollTop = messages.scrollHeight;
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/chat?question=${encodeURIComponent(question)}&session_id=${sessionId}`);
+            if (!response.ok) throw new Error('后端返回了错误状态码');
+            
+            const text = await response.text();
+            aiMsgDiv.innerHTML = marked.parse(text); 
+        } catch (e) {
+            aiMsgDiv.style.color = 'red';
+            aiMsgDiv.innerText = '错误: Failed to fetch. 请检查 VS Code 终端中的 uvicorn 后端是否成功启动并正在运行。';
         }
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-</script>
 
+    window.onload = () => {
+        appendMessage('你好！我是进阶版 Agent 智能体。你可以问我天气，或者点击右上角上传文档后向我提问！', 'ai');
+    };
+</script>
 </body>
 </html>
