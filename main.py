@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.responses import StreamingResponse, HTMLResponse
 import os
